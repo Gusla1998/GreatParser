@@ -9,7 +9,7 @@ using System.Globalization;
 using System.Text;
 using HtmlAgilityPack;
 
-namespace Ozon
+namespace Parser
 {
     static class GitHub
     {
