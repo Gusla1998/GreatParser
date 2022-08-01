@@ -15,14 +15,12 @@ namespace Parser
     {
         public int counter = 0;
         
-        private string BASE_URL = "https://my.marketguru.io/api/wb-hub/v1/categories/stats?start=2022-06-26T21:00:00.000Z&end=2022-07-25T21:00:00.000Z";
-        private string TREE_URL = "https://marketguru.io:3000/api/v2/competitors/tree/";
+        private string BASE_URL = "https://my.marketguru.io/api/wb-hub/v1/categories/stats?start=2022-06-26T21:00:00.000Z&end=2022-07-31T21:00:00.000Z";
+        private string TREE_URL = "https://my.marketguru.io/api/wb-hub/v1/categories/tree/";
         HttpWebRequest request;
-        List<JToken> list;
 
         public MarketGuru()
         {
-            list = new List<JToken>();
             request = (HttpWebRequest)WebRequest.Create(BASE_URL);
             request.Method = "GET";
             request.Headers.Add("Accept", "application/json, text/plain, */*");
@@ -31,7 +29,37 @@ namespace Parser
             request.Headers.Add("Authorization", token);
         }
 
-        public void JsonObjectParse()
+        public void Run()
+        {
+            string vvod = "";
+            while (true)
+            {
+                Console.WriteLine("Введи команду\n1 - собрать информацию\n2 - найти лучшие категории\n3 - выйти.");
+                vvod = Console.ReadLine();
+                switch (vvod)
+                {
+                    case "1":
+                        JsonObjectParse();
+                        break;
+                    case "2":
+                        var records = csvRead("check.csv");
+                        Console.Write("Введи наибольшее количество продавцов в категории: ");
+                        var count = int.Parse(Console.ReadLine());
+                        Console.Write("Введи минимальный месячный оборот категории: ");
+                        var earn = int.Parse(Console.ReadLine());
+                        findBest(records, count, earn);
+                        break;
+                    case "3":
+                        Console.WriteLine("Конец");
+                        return;
+                    default:
+                        Console.WriteLine("Неправиьно написал");
+                        break;
+                }
+            }            
+        }
+
+        private void JsonObjectParse()
         {
             WebResponse response = request.GetResponse();
             StreamReader sr = new StreamReader(response.GetResponseStream(), System.Text.Encoding.UTF8);
@@ -57,11 +85,12 @@ namespace Parser
                     result = sr.ReadToEnd();
                     sr.Close();
                     json_object = JObject.Parse(result);
-                    List_Search(json_object);
+                    ListSearch(json_object);
                 }
             }
             response.Close();
         }
+
         private void ResetHeaders(HttpWebRequest request)
         {
             request.Headers.Add("Accept", "application/json, text/plain, */*");
@@ -69,7 +98,8 @@ namespace Parser
             string token = "Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6ImM3MWYyYTA0LTIwMTEtNGQyOC05NWY1LWIyNmQ1NjUzMjBhNiIsInBlcm1pc3Npb25zIjp7ImlzU2VhcmNoRW5hYmxlZE9uS2V5d29yZEFuYWx5c2lzIjp0cnVlLCJtYXhPZlJlZ2lvbnNPbkNoYXJ0T25HZW9ncmFwaHkiOjEsIm1heE9mV29yZHNPbk1hZ25ldG8iOjMwLCJkYXRhVXBkYXRlRnJlcXVlbmN5IjoxODAsIm1heE9mSXRlbXNPblBvc2l0aW9uQW5hbHl0aWNzIjoyLCJtYXhPZk5vbWVuY2xhdHVyZXNPblNlYXJjaFRhZ3NCeU5vbWVuY2xhdHVyZXMiOjEsIm1heFJlcXVlc3RzUGVyRGF5T25TY3JlZW5lciI6MiwiaXNTZXR0aW5nRm9ySXRlbUVuYWJsZWRPblN1cHBseUNvbnRyb2wiOnRydWUsIm1heE9mSXRlbXNPbkdlb2dyYXBoeSI6MSwibWF4T2ZJdGVtc09uU3VwcGxpZXJBbmFseXNpcyI6NSwibWF4T2ZJdGVtc09uU3VwcGx5Q29udHJvbCI6MiwibWF4T2ZDYXRlZ29yaWVzT25FeHRlcm5hbEl0ZW1EZXRhaWxzIjoyLCJtYXhPZkl0ZW1zT25LZXl3b3JkQW5hbHlzaXMiOjEwLCJtYXhPZkJyYW5kc09uQnJhbmRBbmFseXNpcyI6MjUsIm1heE9mSXRlbXNPbkJyYW5kQW5hbHlzaXMiOjUsIm1heE9mS2V5d29yZHNPblNlYXJjaE9uTWFnbmV0byI6MSwibWF4T2ZDYXRlZ29yaWVzT25LZXl3b3JkQW5hbHlzaXMiOjUsIm1heE9mSXRlbXNPbldiU2VhcmNoVGFnc0FuYWx5c2lzIjoxMCwibWF4T2ZTZWFyY2hUYWdzT25NYWduZXRvIjozMCwibWF4T2ZLZXl3b3Jkc09uRXh0ZXJuYWxJdGVtRGV0YWlscyI6NSwibWF4Q2F0ZWdvcnlMZXZlbE9uQ2F0ZWdvcnlBbmFseXNpcyI6MywibWF4T2ZLZXl3b3Jkc09uU2VhcmNoVGFnc0J5Tm9tZW5jbGF0dXJlcyI6MTAsIm1heFdiQVBJS2V5cyI6MSwiZnJlZVdiQVBJS2V5cyI6MSwibWF4T2ZJdGVtc0luVHJhY2tpbmdMaXN0IjoxMCwibWF4T2ZTZXNzaW9ucyI6MiwibWF4T2ZJdGVtc09uRmluYW5jaWFsQW5hbHl0aWNzIjoyLCJtYXhPZkJyYW5kc09uU3VwcGxpZXJBbmFseXNpcyI6MiwibWF4T2ZJdGVtc09uQ2F0ZWdvcnlBbmFseXNpcyI6MTAsIm1heE9mSXRlbXNPbkNvbW1vbkFuYWx5dGljcyI6MiwibWF4T2ZLZXl3b3Jkc09uS2V5d29yZEFuYWx5c2lzIjoxMCwibWF4UmVxdWVzdHNQZXJEYXlPbkV4dGVybmFsSXRlbURldGFpbHMiOjEwLCJtYXhPZlN1cHBsaWVyc09uU3VwcGxpZXJBbmFseXNpcyI6MjV9LCJzZXNzaW9uSWQiOiJjN2Q1ZTMwMi0zNjI3LTRmM2UtOGM0ZS1iOGMxNzUzZTgzNTQiLCJpYXQiOjE2NTg5MTgxODQsImV4cCI6MTY2MTUxMDE4NCwic3ViIjoic2VydmljZSJ9.iG8wueKMp8ZawbOBdAglR33YMtPWugtN1NBRyAWB5sQ";
             request.Headers.Add("Authorization", token);
         }
-        private JArray Request_For_Cost(JToken category)
+
+        private JArray RequestForCost(JToken category)
         {
             request = (HttpWebRequest)WebRequest.Create(BASE_URL + "&parentId=" + category["id"]);
             ResetHeaders(request);
@@ -81,20 +111,11 @@ namespace Parser
 
             return json;
         }
-        private void List_Search(JObject json_object)
+
+        private void ListSearch(JObject json_object)
         {
             try
             {
-                //Это то что имеет только 2 уровня
-                if (json_object["category"]["title"].ToString() == "Банты") return;
-                if (json_object["category"]["title"].ToString() == "Для курения") return;
-                if (json_object["category"]["title"].ToString() == "Шторы") return;
-                if (json_object["category"]["title"].ToString() == "Запчасти") return;
-                if (json_object["category"]["title"].ToString() == "Масла и жидкости") return;
-                if (json_object["category"]["title"].ToString() == "Инструменты") return;
-                if (json_object["category"]["title"].ToString() == "Мототовары") return;
-                if (json_object["category"]["title"].ToString() == "Автоаксессуары и дополнительное оборудование") return;
-
                 IJEnumerable<JToken> nodes = json_object["category"]["childNodes"];
                 int i = 0;
                 foreach (var node in nodes)
@@ -124,8 +145,8 @@ namespace Parser
                                             //Отсюда парсим 6 уровень
                                             else
                                             {
-                                                JArray for_this_cat = Request_For_Cost(node_deep_deep);
-                                                CSV_WRITE(for_this_cat[z]);
+                                                JArray for_this_cat = RequestForCost(node_deep_deep);
+                                                csvWrite(for_this_cat[z]);
                                             }
                                             z++;
                                         }
@@ -133,8 +154,8 @@ namespace Parser
                                     //Отсюда парсим 5 уровень
                                     else
                                     {
-                                        JArray for_this_cat = Request_For_Cost(node_deep);
-                                        CSV_WRITE(for_this_cat[k]);
+                                        JArray for_this_cat = RequestForCost(node_deep);
+                                        csvWrite(for_this_cat[k]);
                                     }
                                     k++;
                                 }
@@ -142,8 +163,8 @@ namespace Parser
                             //Отсюда парсим 4 уровень
                             else
                             {
-                                JArray for_this_cat = Request_For_Cost(node);
-                                CSV_WRITE(for_this_cat[j]);
+                                JArray for_this_cat = RequestForCost(node);
+                                csvWrite(for_this_cat[j]);
                             }
                             j++;
                         }
@@ -151,51 +172,57 @@ namespace Parser
                     //Отсюда парсим 3 уровень
                     else
                     {
-                        JArray for_this_cat = Request_For_Cost(json_object["category"]);
-                        CSV_WRITE(for_this_cat[i]);
+                        JArray for_this_cat = RequestForCost(json_object["category"]);
+                        csvWrite(for_this_cat[i]);
                     }
                     i++;
                 }
             }
             catch (Exception e)
             {
+                Console.WriteLine($"Error in { json_object["category"]["title"]}.");
                 return;
             }
         }
-        private void CSV_WRITE(JToken stroka)
+
+        private void csvWrite(JToken stroka)
         {
-            using (var writer = new StreamWriter("checknew.csv", true, Encoding.UTF8))
-            using (var csvWriter = new CsvWriter(writer, CultureInfo.InvariantCulture))
+            using (var writer = new StreamWriter("check.csv", true, Encoding.UTF8))
             {
-                csvWriter.NextRecord();
+                using (var csvWriter = new CsvWriter(writer, CultureInfo.InvariantCulture))
+                {
+                    csvWriter.NextRecord();
 
-                List<string> record = new List<string>();
-                record.Add(stroka["avgArticlesCount"].ToString());
-                record.Add(stroka["avgPrices"].ToString());
-                record.Add(stroka["avgProfit"].ToString());
-                record.Add(stroka["avgProfitPerItem"].ToString());
-                record.Add(stroka["avgSalesCount"].ToString());
-                record.Add(stroka["id"].ToString());
-                record.Add(stroka["path"].ToString());
-                record.Add(stroka["profit"].ToString());
-                record.Add(stroka["salesCount"].ToString());
-                record.Add(stroka["title"].ToString());
-                record.Add(stroka["url"].ToString());
-                csvWriter.WriteField(record);
+                    List<string> record = new List<string>();
+                    record.Add(stroka["avgArticlesCount"].ToString());
+                    record.Add(stroka["avgPrices"].ToString());
+                    record.Add(stroka["avgProfit"].ToString());
+                    record.Add(stroka["avgProfitPerItem"].ToString());
+                    record.Add(stroka["avgSalesCount"].ToString());
+                    record.Add(stroka["id"].ToString());
+                    record.Add(stroka["path"].ToString());
+                    record.Add(stroka["profit"].ToString());
+                    record.Add(stroka["salesCount"].ToString());
+                    record.Add(stroka["title"].ToString());
+                    record.Add(stroka["url"].ToString());
+                    csvWriter.WriteField(record);
 
-                writer.Flush();
+                    writer.Flush();
+                }
+                Console.WriteLine($"Parsed {stroka["title"]}.");
             }
         }
-        public List<Record> CSV_READ(string file)
+
+        private List<MarketPlaceRecord> csvRead(string file)
         {
-            List<Record> records = new List<Record>();
+            List<MarketPlaceRecord> records = new List<MarketPlaceRecord>();
             using (var reader = new StreamReader(file))
             using (var csv = new CsvReader(reader, CultureInfo.InvariantCulture))
             {
                 csv.Read();
                 while (csv.Read())
                 {
-                    Record sample = new Record();
+                    MarketPlaceRecord sample = new MarketPlaceRecord();
                     sample.CountProduct = float.Parse(csv.GetField<string>(0).Equals("") ? "0" : csv.GetField<string>(0));
                     sample.AveragePrice = float.Parse(csv.GetField<string>(1).Equals("") ? "0" : csv.GetField<string>(1));
                     sample.MonthEarn = float.Parse(csv.GetField<string>(7).Equals("") ? "0" : csv.GetField<string>(7));
@@ -211,15 +238,15 @@ namespace Parser
             return records;
         }
 
-        public void FindSex(List<Record> records)
+        private void findBest(List<MarketPlaceRecord> records, int count, int earn)
         {
             foreach (var record in records)
             {
-                //////Тут менять эти 2 числа///////////////////////////////////////////////////
-                if (record.CountProduct <= 600 && record.DayEarn >= 400000) Console.WriteLine(record.Name);
+                if (record.CountProduct <= count && record.DayEarn >= earn) Console.WriteLine(record.Name);
             }
         }
-        public class Record
+
+        private class MarketPlaceRecord
         {
             public float CountProduct { get; set; }
             public float AveragePrice { get; set; }

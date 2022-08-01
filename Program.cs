@@ -25,11 +25,7 @@ namespace Parser
 
 
             MarketGuru ozon = new MarketGuru();
-            ozon.JsonObjectParse();
-            //ozon.FindSex(ozon.CSV_READ("check.csv"));
-
-            //Ozon ozon = new Ozon();
-            //ozon.GetAllRequests();
+            ozon.Run();
 
             //DEFY.ParseMask();
             //StepApp.Run();
